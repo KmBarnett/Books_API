@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-var format := &"fmt"
+
 func main()  {
-	format.Println("huh")
+
 }
