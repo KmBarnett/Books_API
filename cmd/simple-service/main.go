@@ -1,7 +1,7 @@
 package main
 
 import (
-	// "fmt"
+	"fmt"
 	"encoding/json"
 	"net/http"
 	"log"
@@ -52,7 +52,7 @@ func getBook(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	json.NewEncoder(w).Encode(Message{Message: "Content Not Found"})
+	http.Error(w,  "Content Not Found", http.StatusNotFound)
 }
 
 // Create books
@@ -61,17 +61,23 @@ func createBook(w http.ResponseWriter, r *http.Request) {
 	var book Book
 	// decoding body
 	_ = json.NewDecoder(r.Body).Decode(&book)
+	for _, item := range books {
+		if item.ID == book.ID {
+			http.Error(w,  fmt.Sprintf("Item with an ID %s already Exists. If you meant to update one please refer to update book documentation", book.ID), http.StatusBadRequest)
+			return
+		}
+	}
 	if book.ID == "" {
 		book.ID = sid.IdHex()
 	}
 	books = append(books, book)
+	w.WriteHeader(http.StatusAccepted)
 	json.NewEncoder(w).Encode(book)
 }
 
 // update Book
 func updateBook(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
-	var message Message
 	for index, item := range books {
 		if item.ID == params["id"] {
 			// slicing books out of slice
@@ -82,8 +88,7 @@ func updateBook(w http.ResponseWriter, r *http.Request) {
 	if message.Message != "" {
 		createBook(w, r)
 	} else {
-		message.Message = "Content Not Found"
-		json.NewEncoder(w).Encode(message)
+		http.Error(w,  "Content Not Found", http.StatusNotFound)
 	}
 }
 
@@ -91,18 +96,15 @@ func updateBook(w http.ResponseWriter, r *http.Request) {
 func deleteBook(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r) // will get any params
-	var message Message
 	for index, item := range books {
 		if item.ID == params["id"] {
 			// slicing books out of slice
 			books = append(books[:index], books[index + 1:]...)
-			message.Message = "Content Deleted"
 			break
 		}
-		message.Message = "Content Not Found"
+		http.Error(w,  "Content Not Found", http.StatusNotFound)
 	}
-
-	json.NewEncoder(w).Encode(message)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func main()  {
